@@ -4,8 +4,8 @@ import { merge } from './utils/object';
 import { findChildren, getContent } from './utils/xml';
 import { parseAttributes } from './parseAttributes';
 import errors from './errors';
-import resolveUrl from '@videojs/vhs-utils/dist/resolve-url';
-import decodeB64ToUint8Array from '@videojs/vhs-utils/dist/decode-b64-to-uint8-array';
+import resolveUrl from '@videojs/vhs-utils/es/resolve-url';
+import decodeB64ToUint8Array from '@videojs/vhs-utils/es/decode-b64-to-uint8-array';
 
 const keySystemsMap = {
   'urn:uuid:1077efec-c0b2-4d02-ace3-3c1e52e2fb4b': 'org.w3.clearkey',
@@ -176,18 +176,18 @@ export const inheritBaseUrls =
 const generateKeySystemInformation = (contentProtectionNodes) => {
   return contentProtectionNodes.reduce((acc, node) => {
     const attributes = parseAttributes(node);
-    const keySystem = keySystemsMap[attributes.schemeIdUri];
+    const keySystem = keySystemsMap[attributes.schemeIdUri.toLowerCase()];
 
     if (keySystem) {
-      acc[keySystem] = { attributes };
+      acc[keySystem] = { attributes : attributes };
 
-      const psshNode = findChildren(node, 'cenc:pssh')[0];
+      const psshNode = findChildren(node, 'cenc:pssh')[0] || findChildren(node, 'pssh')[0];
 
       if (psshNode) {
         const pssh = getContent(psshNode);
         const psshBuffer = pssh && decodeB64ToUint8Array(pssh);
-
         acc[keySystem].pssh = psshBuffer;
+        acc[keySystem].psshNormal = pssh;
       }
     }
 
@@ -235,7 +235,13 @@ export const toRepresentations =
     roleAttributes
   );
 
-  const contentProtection = generateKeySystemInformation(findChildren(adaptationSet, 'ContentProtection'));
+  let children = findChildren(adaptationSet, 'ContentProtection')
+  if (children.length === 0) {
+      let repChildren = findChildren(adaptationSet, 'Representation')
+      children = findChildren(repChildren[0], 'ContentProtection')
+  }
+
+  const contentProtection = generateKeySystemInformation(children);
 
   if (Object.keys(contentProtection).length) {
     attrs = merge(attrs, { contentProtection });
@@ -315,12 +321,24 @@ export const inheritAttributes = (mpd, options = {}) => {
     throw new Error(errors.INVALID_NUMBER_OF_PERIOD);
   }
 
+  const locations = findChildren(mpd, 'Location');
+
   const mpdAttributes = parseAttributes(mpd);
   const mpdBaseUrls = buildBaseUrls([ manifestUri ], findChildren(mpd, 'BaseURL'));
-
+  const mpdLocationUrls = buildBaseUrls ([manifestUri] , findChildren(mpd, 'Location'));
   mpdAttributes.sourceDuration = mpdAttributes.mediaPresentationDuration || 0;
   mpdAttributes.NOW = NOW;
   mpdAttributes.clientOffset = clientOffset;
+  var mpdLocationUrl = mpdLocationUrls.length > 0 && mpdLocationUrls[0].length > 0 ? mpdLocationUrls[0] : "";
+  mpdAttributes.mpdBaseURL = mpdBaseUrls.length > 0 && mpdBaseUrls[0].length > 0 ? mpdBaseUrls[0] : mpdLocationUrl;
 
-  return flatten(periods.map(toAdaptationSets(mpdAttributes, mpdBaseUrls)));
+  if (locations.length) {
+    mpdAttributes.locations = locations.map(getContent);
+  }
+
+  return {
+    baseUrls: mpdAttributes.mpdBaseURL,
+    locations: mpdAttributes.locations,
+    representationInfo: flatten(periods.map(toAdaptationSets(mpdAttributes, mpdBaseUrls)))
+  };
 };

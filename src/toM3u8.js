@@ -105,12 +105,18 @@ export const formatVttPlaylist = ({ attributes, segments }) => {
     // targetDuration should be the same duration as the only segment
     attributes.duration = attributes.sourceDuration;
   }
+
+  const m3u8Attributes = {
+    NAME: attributes.id,
+    BANDWIDTH: attributes.bandwidth,
+    ['PROGRAM-ID']: 1
+  };
+
+  if (attributes.codecs) {
+    m3u8Attributes.CODECS = attributes.codecs;
+  }
   return {
-    attributes: {
-      NAME: attributes.id,
-      BANDWIDTH: attributes.bandwidth,
-      ['PROGRAM-ID']: 1
-    },
+    attributes: m3u8Attributes,
     uri: '',
     endList: (attributes.type || 'static') === 'static',
     timeline: attributes.periodIndex,
@@ -231,7 +237,7 @@ export const formatVideoPlaylist = ({ attributes, segments, sidx }) => {
   return playlist;
 };
 
-export const toM3u8 = (dashPlaylists, sidxMapping = {}) => {
+export const toM3u8 = (dashPlaylists, baseUrls, locations, sidxMapping = {}) => {
   if (!dashPlaylists.length) {
     return {};
   }
@@ -241,13 +247,13 @@ export const toM3u8 = (dashPlaylists, sidxMapping = {}) => {
     sourceDuration: duration,
     type = 'static',
     suggestedPresentationDelay,
-    minimumUpdatePeriod = 0
+    minimumUpdatePeriod
   } = dashPlaylists[0].attributes;
 
   const videoOnly = ({ attributes }) =>
-    attributes.mimeType === 'video/mp4' || attributes.contentType === 'video';
+    attributes.mimeType === 'video/mp4' || attributes.mimeType === 'video/webm' || attributes.contentType === 'video';
   const audioOnly = ({ attributes }) =>
-    attributes.mimeType === 'audio/mp4' || attributes.contentType === 'audio';
+    attributes.mimeType === 'audio/mp4' || attributes.mimeType === 'audio/webm' || attributes.contentType === 'audio';
   const vttOnly = ({ attributes }) =>
     attributes.mimeType === 'text/vtt' || attributes.contentType === 'text';
 
@@ -269,8 +275,21 @@ export const toM3u8 = (dashPlaylists, sidxMapping = {}) => {
     uri: '',
     duration,
     playlists: addSegmentInfoFromSidx(videoPlaylists, sidxMapping),
-    minimumUpdatePeriod: minimumUpdatePeriod * 1000
+    attributes: {}
   };
+
+  if (minimumUpdatePeriod >= 0) {
+    master.minimumUpdatePeriod = minimumUpdatePeriod * 1000;
+  }
+
+  if (locations) {
+    master.locations = locations;
+  }
+
+  if(baseUrls) {
+    master.attributes.mpdBaseUrls = baseUrls;
+  }
+
 
   if (type === 'dynamic') {
     master.suggestedPresentationDelay = suggestedPresentationDelay;
