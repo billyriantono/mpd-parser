@@ -23,7 +23,6 @@ npm-debug.log*
 
 # Dependency directories
 bower_components/
-node_modules/
 
 # Build-related directories
 docs/api/
