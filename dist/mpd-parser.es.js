@@ -1,10 +1,11 @@
-/*! @name mpd-parser @version 0.15.2 @license Apache-2.0 */
-import resolveUrl from '@videojs/vhs-utils/es/resolve-url';
+/*! @name mpd-parser @version 0.10.1 @license Apache-2.0 */
+import resolveUrl from '@videojs/vhs-utils/dist/resolve-url';
 import window from 'global/window';
+import resolveUrl$1 from '@videojs/vhs-utils/es/resolve-url';
 import decodeB64ToUint8Array from '@videojs/vhs-utils/es/decode-b64-to-uint8-array';
 import { DOMParser } from 'xmldom';
 
-var version = "0.15.2";
+var version = "0.10.1";
 
 var isObject = function isObject(obj) {
   return !!obj && typeof obj === 'object';
@@ -16,10 +17,6 @@ var merge = function merge() {
   }
 
   return objects.reduce(function (result, source) {
-    if (typeof source !== 'object') {
-      return result;
-    }
-
     Object.keys(source).forEach(function (key) {
       if (Array.isArray(result[key]) && Array.isArray(source[key])) {
         result[key] = result[key].concat(source[key]);
@@ -612,6 +609,7 @@ var formatVideoPlaylist = function formatVideoPlaylist(_ref3) {
         height: attributes.height
       },
       CODECS: attributes.codecs,
+      FRAMERATE: attributes.frameRate,
       BANDWIDTH: attributes.bandwidth
     }, _attributes2['PROGRAM-ID'] = 1, _attributes2),
     uri: '',
@@ -1476,7 +1474,7 @@ var buildBaseUrls = function buildBaseUrls(referenceUrls, baseUrlElements) {
 
   return flatten(referenceUrls.map(function (reference) {
     return baseUrlElements.map(function (baseUrlElement) {
-      return resolveUrl(reference, getContent(baseUrlElement));
+      return resolveUrl$1(reference, getContent(baseUrlElement));
     });
   }));
 };
@@ -1798,14 +1796,8 @@ var stringToMpdXml = function stringToMpdXml(manifestString) {
   }
 
   var parser = new DOMParser();
-  var xml;
-  var mpd;
-
-  try {
-    xml = parser.parseFromString(manifestString, 'application/xml');
-    mpd = xml && xml.documentElement.tagName === 'MPD' ? xml.documentElement : null;
-  } catch (e) {// ie 11 throwsw on invalid xml
-  }
+  var xml = parser.parseFromString(manifestString, 'application/xml');
+  var mpd = xml && xml.documentElement.tagName === 'MPD' ? xml.documentElement : null;
 
   if (!mpd || mpd && mpd.getElementsByTagName('parsererror').length > 0) {
     throw new Error(errors.DASH_INVALID_XML);

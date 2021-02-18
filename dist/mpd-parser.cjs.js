@@ -1,20 +1,16 @@
-/*! @name mpd-parser @version 0.15.2 @license Apache-2.0 */
+/*! @name mpd-parser @version 0.10.1 @license Apache-2.0 */
 'use strict';
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-var resolveUrl = require('@videojs/vhs-utils/cjs/resolve-url');
-var window = require('global/window');
-var decodeB64ToUint8Array = require('@videojs/vhs-utils/cjs/decode-b64-to-uint8-array');
+function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+
+var resolveUrl = _interopDefault(require('@videojs/vhs-utils/dist/resolve-url'));
+var window = _interopDefault(require('global/window'));
+var decodeB64ToUint8Array = _interopDefault(require('@videojs/vhs-utils/dist/decode-b64-to-uint8-array'));
 var xmldom = require('xmldom');
 
-function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
-
-var resolveUrl__default = /*#__PURE__*/_interopDefaultLegacy(resolveUrl);
-var window__default = /*#__PURE__*/_interopDefaultLegacy(window);
-var decodeB64ToUint8Array__default = /*#__PURE__*/_interopDefaultLegacy(decodeB64ToUint8Array);
-
-var version = "0.15.2";
+var version = "0.10.1";
 
 var isObject = function isObject(obj) {
   return !!obj && typeof obj === 'object';
@@ -26,10 +22,6 @@ var merge = function merge() {
   }
 
   return objects.reduce(function (result, source) {
-    if (typeof source !== 'object') {
-      return result;
-    }
-
     Object.keys(source).forEach(function (key) {
       if (Array.isArray(result[key]) && Array.isArray(source[key])) {
         result[key] = result[key].concat(source[key]);
@@ -132,7 +124,7 @@ var urlTypeToSegment = function urlTypeToSegment(_ref) {
       indexRange = _ref$indexRange === void 0 ? '' : _ref$indexRange;
   var segment = {
     uri: source,
-    resolvedUri: resolveUrl__default['default'](baseUrl || '', source)
+    resolvedUri: resolveUrl(baseUrl || '', source)
   };
 
   if (range || indexRange) {
@@ -622,6 +614,7 @@ var formatVideoPlaylist = function formatVideoPlaylist(_ref3) {
         height: attributes.height
       },
       CODECS: attributes.codecs,
+      FRAMERATE: attributes.frameRate,
       BANDWIDTH: attributes.bandwidth
     }, _attributes2['PROGRAM-ID'] = 1, _attributes2),
     uri: '',
@@ -1017,7 +1010,7 @@ var segmentsFromTemplate = function segmentsFromTemplate(attributes, segmentTime
       uri: uri,
       timeline: segment.timeline,
       duration: segment.duration,
-      resolvedUri: resolveUrl__default['default'](attributes.baseUrl || '', uri),
+      resolvedUri: resolveUrl(attributes.baseUrl || '', uri),
       map: mapSegment,
       number: segment.number
     };
@@ -1486,7 +1479,7 @@ var buildBaseUrls = function buildBaseUrls(referenceUrls, baseUrlElements) {
 
   return flatten(referenceUrls.map(function (reference) {
     return baseUrlElements.map(function (baseUrlElement) {
-      return resolveUrl__default['default'](reference, getContent(baseUrlElement));
+      return resolveUrl(reference, getContent(baseUrlElement));
     });
   }));
 };
@@ -1639,7 +1632,7 @@ var generateKeySystemInformation = function generateKeySystemInformation(content
 
       if (psshNode) {
         var pssh = getContent(psshNode);
-        var psshBuffer = pssh && decodeB64ToUint8Array__default['default'](pssh);
+        var psshBuffer = pssh && decodeB64ToUint8Array(pssh);
         acc[keySystem].pssh = psshBuffer;
         acc[keySystem].psshNormal = pssh;
       }
@@ -1736,7 +1729,7 @@ var toAdaptationSets = function toAdaptationSets(mpdAttributes, mpdBaseUrls) {
     var periodAtt = parseAttributes(period);
     var parsedPeriodId = parseInt(periodAtt.id, 10); // fallback to mapping index if Period@id is not a number
 
-    var periodIndex = window__default['default'].isNaN(parsedPeriodId) ? index : parsedPeriodId;
+    var periodIndex = window.isNaN(parsedPeriodId) ? index : parsedPeriodId;
     var periodAttributes = merge(mpdAttributes, {
       periodIndex: periodIndex
     });
@@ -1808,14 +1801,8 @@ var stringToMpdXml = function stringToMpdXml(manifestString) {
   }
 
   var parser = new xmldom.DOMParser();
-  var xml;
-  var mpd;
-
-  try {
-    xml = parser.parseFromString(manifestString, 'application/xml');
-    mpd = xml && xml.documentElement.tagName === 'MPD' ? xml.documentElement : null;
-  } catch (e) {// ie 11 throwsw on invalid xml
-  }
+  var xml = parser.parseFromString(manifestString, 'application/xml');
+  var mpd = xml && xml.documentElement.tagName === 'MPD' ? xml.documentElement : null;
 
   if (!mpd || mpd && mpd.getElementsByTagName('parsererror').length > 0) {
     throw new Error(errors.DASH_INVALID_XML);

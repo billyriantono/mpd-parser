@@ -214,6 +214,7 @@ export const formatVideoPlaylist = ({ attributes, segments, sidx }) => {
         height: attributes.height
       },
       CODECS: attributes.codecs,
+      FRAMERATE: attributes.frameRate,
       BANDWIDTH: attributes.bandwidth,
       ['PROGRAM-ID']: 1
     },
